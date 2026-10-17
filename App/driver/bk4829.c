@@ -1178,12 +1178,22 @@ void BK4819_EnterBypass(void)
 
     // Bypass all AF filters (Rx + Tx) as recommended for digital bypass mode.
     // REG_2B:
+    //  RX bits, as documented for BK4819 (not re-verified on BK4829):
     //  bit10: Disable AF Rx HPF300
     //  bit 9: Disable AF Rx LPF3K
     //  bit 8: Disable AF Rx de-emphasis
-    //  bit 2: Disable AF Tx HPF300
-    //  bit 1: Disable AF Tx LPF1
-    //  bit 0: Disable AF Tx pre-emphasis
+    //
+    //  TX bits, measured on BK4829 (UV-K5 V3, wide FM, 300 Hz - 7 kHz sweeps,
+    //  deviation measured from baseband IQ). They do NOT match the BK4819 docs:
+    //  bit 3: removes the ~3.2 kHz AF Tx low-pass (stock: -37 dB at 3.4 kHz;
+    //         with bit 3: -2.7 dB at 3.4 kHz, -7.9 dB at 5 kHz with REG_43 LPF2 = 5.5 kHz)
+    //  bit 4: disables AF Tx pre-emphasis (300 Hz goes from -9 dB to 0 dB vs 1 kHz,
+    //         1 kHz level drops ~8 dB). bit 5 gives the same result.
+    //  bit 0, 1, 2: no measurable effect on TX audio between 300 Hz and 6 kHz
+    //         (the BK4819 docs call them pre-emphasis / LPF1 / HPF300).
+    //  bits 6, 7: no measurable effect.
+    //  BYP is receive-only (TX is disabled in RADIO_PrepareTX), so the TX bits
+    //  set below are harmless here; they are kept unchanged.
     uint16_t reg2b = BK4819_ReadRegister(BK4819_REG_2B);
     reg2b |= (1u << 10) | (1u << 9) | (1u << 8) | (1u << 2) | (1u << 1) | (1u << 0);
     BK4819_WriteRegister(BK4819_REG_2B, reg2b);
